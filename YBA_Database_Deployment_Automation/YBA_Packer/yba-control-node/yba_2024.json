@@ -1,0 +1,43 @@
+{
+   "builders": [
+      {
+        "type": "googlecompute",
+        "project_id": "winter-cocoa-437211-s2",
+        "source_image_family": "centos-stream-9",
+        "source_image_project_id": "centos-cloud",
+        "zone": "us-central1-a",
+        "machine_type": "n1-standard-8",
+        "disk_size": 30,
+        "image_name": "yugabytedb-image-{{timestamp}}",
+        "disk_type": "pd-ssd",
+        "ssh_username": "packer",
+        "tags": [
+          "yugabytedb-image",
+          "cutom-image"
+        ]
+      }
+    ],
+    "provisioners": [
+      {
+        "type": "shell",
+        "inline": [
+          "set -e",
+              "start_time=$(date +%s)",
+              "echo 'Starting YugabyteDB installation...'",
+              "sudo yum install -y wget",
+              "wget https://downloads.yugabyte.com/releases/2.25.0.0/yugabyte-2.25.0.0-b489-linux-x86_64.tar.gz",
+              "tar xvfz yugabyte-2.25.0.0-b489-linux-x86_64.tar.gz",
+              "cd yugabyte-2.25.0.0/",
+              "sudo ./bin/post_install.sh",
+              "sudo chown -R packer:packer /home/packer/yugabyte-2.25.0.0/openssl-config",
+              "./bin/yugabyted start",
+              "./bin/yugabyted status || { echo 'Setup failed.'; exit 1; }",
+              "end_time=$(date +%s)",
+              "execution_time=$((end_time - start_time))",
+              "echo 'Setup completed successfully!'",
+              "echo 'Total execution time: $execution_time seconds'"
+        ]
+      }
+    ]
+  }
+  

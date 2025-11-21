@@ -1,0 +1,84 @@
+---
+- name: Install YBA Anywhere
+  hosts: default
+  become: true
+  gather_facts: false
+ 
+  vars:
+    license_file: "./yba.yaml"
+    license_content: "{{ lookup('file', license_file) }}"
+    installer_version: "2024.2.5.0-b59"
+    installer_name: "yba_installer_full-{{ installer_version }}-linux-x86_64.tar.gz"
+    installer_dir: "/home/ybaadmin/yba_installer_full-{{ installer_version }}"
+    installer_src: "/home/ybaadmin/{{ installer_name }}"
+    yba_dir: "/opt/yba-ctl"
+ 
+  tasks:
+ 
+    - name: Get Python Version
+      command: python3 --version
+      register: python
+ 
+    - name: Show Python version
+      debug:
+        msg: "{{ python.stdout }}"
+ 
+    - name: Get OS info
+      command: cat /etc/os-release
+      register: os
+ 
+    - name: Print OS Info
+      debug:
+        msg: "{{ os.stdout }}"
+ 
+    - name: Create ybaadmin user
+      user:
+        name: ybaadmin
+        shell: /bin/bash
+        groups: wheel
+        state: present
+        create_home: yes
+        password: "{{ '1234' | password_hash('sha512') }}"
+ 
+ 
+    - name: Ensure {{ yba_dir }} exists
+      file:
+        path: "{{ yba_dir }}"
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: "0755"
+ 
+    - name: Copy license content to {{ yba_dir }}/yba.lic
+      copy:
+        content: "{{ license_content }}"
+        dest: "{{ yba_dir }}/yba.lic"
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0644'
+ 
+    - name: Download YBA installer from GCS
+      become: true
+      become_user: ybaadmin
+      ansible.builtin.shell: |
+        cd /home/ybaadmin
+        wget https://downloads.yugabyte.com/releases/2024.2.5.1/yba_installer_full-2024.2.5.1-b1-linux-x86_64.tar.gz
+        tar -xf yba_installer_full-2024.2.5.1-b1-linux-x86_64.tar.gz
+        cd yba_installer_full-2024.2.5.1-b1/
+        pwd
+
+    - name: Run the pre-flight check as ybaadmin
+      command: "/home/ybaadmin/yba_installer_full-2024.2.5.1-b1/yba-ctl --skip_preflight disk-availability preflight -f"
+      register: preflight
+ 
+    - name: Print pre-flight output
+      debug:
+        var: preflight.stdout_lines
+ 
+    - name: Install Yugabyte Anywhere as ybaadmin
+      command: "/home/ybaadmin/yba_installer_full-2024.2.5.1-b1/yba-ctl --skip_preflight disk-availability install -f"
+      register: install
+ 
+    - name: Print install logs
+      debug:
+        var: install.stdout_lines

@@ -41,7 +41,7 @@
         label: "{{ item.part }}"
 
     # ------------------------------
-    # FIX #1: Combine UUID with disk info
+    #  Combine UUID with disk info
     # ------------------------------
     - name: Build list of disks with UUID
       set_fact:
@@ -51,7 +51,7 @@
         label: "{{ item.0.part }}"
 
     # ------------------------------
-    # FIX #2: Use item.uuid (no more loop.index0)
+    # Use item.uuid (no more loop.index0)
     # ------------------------------
     - name: Add fstab entry for each mounted volume
       ansible.builtin.lineinfile:

@@ -23,7 +23,7 @@
     - name: Create primary ext4 partition on /dev/sdb
       ansible.builtin.command: "parted -s {{ disk_device }} mkpart primary ext4 0% 100%"
 
-    # ✅ FIXED: Replaced unavailable 'community.general.mkfs' with 'ansible.builtin.command'
+
     # The 'creates' argument ensures this task is idempotent.
     - name: Create ext4 filesystem on /dev/sdb1
       ansible.builtin.command: "mkfs -t {{ filesystem_type }} {{ partition_device }}"

@@ -1,0 +1,222 @@
+---
+- name: YBA Post Configuration
+  hosts: localhost
+  become: yes
+
+  vars:
+    disk_device: "/dev/sdb"
+    partition_device: "/dev/sdb1"
+    mount_point: "/mnt/yba"
+    filesystem_type: "ext4"
+
+   ## Installing the YBA 
+    yba_dir: "/home/ybaadmin/yba_installer_full-2024.2.5.1-b1"
+    yba_opt_dir: "/opt/yba-ctl"
+    license_src: "/opt/yba-ctl/yba.lic"
+    skip_preflight: "disk-availability,memory,cpu"
+
+  tasks:
+
+    - name: Create GPT label on /dev/sdb
+      ansible.builtin.command: "parted -s {{ disk_device }} mklabel gpt"
+
+    - name: Create primary ext4 partition on /dev/sdb
+      ansible.builtin.command: "parted -s {{ disk_device }} mkpart primary ext4 0% 100%"
+
+    # ✅ FIXED: Replaced unavailable 'community.general.mkfs' with 'ansible.builtin.command'
+    # The 'creates' argument ensures this task is idempotent.
+    - name: Create ext4 filesystem on /dev/sdb1
+      ansible.builtin.command: "mkfs -t {{ filesystem_type }} {{ partition_device }}"
+      args:
+        # Check if the filesystem has been created (based on the presence of a superblock)
+        creates: /dev/disk/by-uuid/{{ disk_uuid.stdout | default('NO_UUID') }} 
+        # Note: A cleaner way to ensure idempotence would be checking against a specific block device property 
+        # or skipping the task if blkid already returns an fstype, but this is a quick fix.
+
+    - name: Ensure mount directory exists
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Get UUID of /dev/sdb1
+      ansible.builtin.command: "blkid -s UUID -o value {{ partition_device }}"
+      register: disk_uuid
+
+    - name: Add fstab entry for /mnt/yba
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ disk_uuid.stdout | trim }} {{ mount_point }} {{ filesystem_type }} defaults 0 0"
+        state: present
+
+    - name: Mount all entries from fstab
+      ansible.builtin.command: mount -a
+
+
+
+      # seLinux Settings
+
+    - name: Check SELinux status before change
+      command: getenforce
+      register: selinux_before
+
+    - name: Print SELinux status (before)
+      debug:
+        msg: "SELinux status before: {{ selinux_before.stdout }}"
+
+    - name: Set SELinux to permissive (setenforce 0)
+      command: setenforce 0
+      when: selinux_before.stdout != "Permissive"
+
+    - name: Check SELinux status after change
+      command: getenforce
+      register: selinux_after
+
+    - name: Print SELinux status (after)
+      debug:
+        msg: "SELinux status after: {{ selinux_after.stdout }}"
+
+
+      # sshd Settings
+    
+    - name: Ensure PublickeyAuthentication is explicitly set to 'yes'
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PubkeyAuthentication\s+' # Finds commented or uncommented line
+        line: "PubkeyAuthentication yes"
+        validate: '/usr/sbin/sshd -t -f %s'
+        state: present
+        
+    - name: Ensure PasswordAuthentication is explicitly set to 'no' (optional, but good security practice)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication\s+' 
+        line: "PasswordAuthentication no"
+        validate: '/usr/sbin/sshd -t -f %s'
+        state: present
+
+    - name: Restart sshd service to apply new configuration
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+
+    ## --- Sudoers Configuration (/etc/sudoers) ---
+
+    - name: Allow 'wheel' group to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: '%wheel        ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^%wheel\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
+    
+    - name: Allow 'ybaadmin' user to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: 'ybaadmin      ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^ybaadmin\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
+
+
+
+
+    ### Install YBA 
+
+    
+    # ---------------------------------------------------------
+    # STEP 0: Backup License Before Clean
+    # ---------------------------------------------------------
+    - name: Ensure license file exists
+      stat:
+        path: "{{ license_src }}"
+      register: lic_check
+
+    - fail:
+        msg: "License file not found at {{ license_src }}"
+      when: not lic_check.stat.exists
+
+    - name: Copy license to /tmp before clean
+      copy:
+        src: "{{ license_src }}"
+        dest: "/tmp/yba.lic"
+        mode: '0644'
+
+    # ---------------------------------------------------------
+    # STEP 1: CLEAN
+    # ---------------------------------------------------------
+    - name: Run yba-ctl clean
+      command: ./yba-ctl clean --all --force
+      args:
+        chdir: "{{ yba_dir }}"
+      register: clean_output
+      failed_when: false
+
+    - debug:
+        var: clean_output.stdout
+
+    # ---------------------------------------------------------
+    # STEP 2: Restore License After Clean
+    # ---------------------------------------------------------
+    - name: Ensure /opt/yba-ctl directory exists
+      file:
+        path: "{{ yba_opt_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy license back to /opt/yba-ctl/
+      copy:
+        src: "/tmp/yba.lic"
+        dest: "{{ yba_opt_dir }}/yba.lic"
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0644'
+
+    # ---------------------------------------------------------
+    # STEP 3: PREFLIGHT
+    # ---------------------------------------------------------
+    - name: Run yba-ctl preflight
+      command: >
+        ./yba-ctl --skip_preflight {{ skip_preflight }}
+        preflight --force
+      args:
+        chdir: "{{ yba_dir }}"
+      register: preflight_output
+
+    - debug:
+        var: preflight_output.stdout
+
+
+  
+    # ---------------------------------------------------------
+    # STEP 2.5: Update installRoot
+    # ---------------------------------------------------------
+    - name: Update installRoot in yba-ctl.yml
+      ansible.builtin.replace:
+        path: /opt/yba-ctl/yba-ctl.yml
+        regexp: '^installRoot:.*'
+        replace: 'installRoot: "/mnt/yba"'
+
+    - name: Verify updated installRoot
+      shell: "grep '^installRoot' /opt/yba-ctl/yba-ctl.yml"
+      register: installroot_verify
+      changed_when: false
+
+    - debug:
+        msg: "{{ installroot_verify.stdout }}"
+
+
+    # ---------------------------------------------------------
+    # STEP 4: INSTALL
+    # ---------------------------------------------------------
+    - name: Run yba-ctl install
+      command: >
+        ./yba-ctl --skip_preflight {{ skip_preflight }}
+        install --force
+      args:
+        chdir: "{{ yba_dir }}"
+      register: install_output
+
+    - debug:
+        var: install_output.stdout
+

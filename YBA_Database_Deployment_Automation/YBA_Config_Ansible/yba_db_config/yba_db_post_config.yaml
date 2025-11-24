@@ -45,7 +45,7 @@
     # ------------------------------
     - name: Build list of disks with UUID
       set_fact:
-        disks_with_uuid: "{{ disks_with_uuid | default([]) + [ item.0 | combine({'uuid': item.1.stdout }) ] }}"
+        disks_with_uuid: "{{ disks_with_uuid | default([]) + [ item.0 | combine({'uuid': item.1.stdlines }) ] }}"
       loop: "{{ disks | zip(uuid_output.results) }}"
       loop_control:
         label: "{{ item.0.part }}"
@@ -99,11 +99,11 @@
 
     - name: Print SELinux status (before)
       debug:
-        msg: "SELinux status before: {{ selinux_before.stdout }}"
+        msg: "SELinux status before: {{ selinux_before.stdlines }}"
 
     - name: Set SELinux to permissive (setenforce 0)
       command: setenforce 0
-      when: selinux_before.stdout != "Permissive"
+      when: selinux_before.stdlines != "Permissive"
 
     - name: Check SELinux status after change
       command: getenforce
@@ -111,7 +111,7 @@
 
     - name: Print SELinux status (after)
       debug:
-        msg: "SELinux status after: {{ selinux_after.stdout }}"
+        msg: "SELinux status after: {{ selinux_after.stdlines }}"
 
     
     ## --- SSH Daemon Configuration (/etc/ssh/sshd_config) ---

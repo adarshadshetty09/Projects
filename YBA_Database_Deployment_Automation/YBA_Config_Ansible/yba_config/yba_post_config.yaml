@@ -29,7 +29,7 @@
       ansible.builtin.command: "mkfs -t {{ filesystem_type }} {{ partition_device }}"
       args:
         # Check if the filesystem has been created (based on the presence of a superblock)
-        creates: /dev/disk/by-uuid/{{ disk_uuid.stdout | default('NO_UUID') }} 
+        creates: /dev/disk/by-uuid/{{ disk_uuid.stdlines | default('NO_UUID') }} 
         # Note: A cleaner way to ensure idempotence would be checking against a specific block device property 
         # or skipping the task if blkid already returns an fstype, but this is a quick fix.
 
@@ -46,7 +46,7 @@
     - name: Add fstab entry for /mnt/yba
       ansible.builtin.lineinfile:
         path: /etc/fstab
-        line: "UUID={{ disk_uuid.stdout | trim }} {{ mount_point }} {{ filesystem_type }} defaults 0 0"
+        line: "UUID={{ disk_uuid.stdlines | trim }} {{ mount_point }} {{ filesystem_type }} defaults 0 0"
         state: present
 
     - name: Mount all entries from fstab
@@ -62,11 +62,11 @@
 
     - name: Print SELinux status (before)
       debug:
-        msg: "SELinux status before: {{ selinux_before.stdout }}"
+        msg: "SELinux status before: {{ selinux_before.stdlines }}"
 
     - name: Set SELinux to permissive (setenforce 0)
       command: setenforce 0
-      when: selinux_before.stdout != "Permissive"
+      when: selinux_before.stdlines != "Permissive"
 
     - name: Check SELinux status after change
       command: getenforce
@@ -74,11 +74,11 @@
 
     - name: Print SELinux status (after)
       debug:
-        msg: "SELinux status after: {{ selinux_after.stdout }}"
+        msg: "SELinux status after: {{ selinux_after.stdlines }}"
 
 
       # sshd Settings
-    
+  
     - name: Ensure PublickeyAuthentication is explicitly set to 'yes'
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
@@ -153,7 +153,7 @@
       failed_when: false
 
     - debug:
-        var: clean_output.stdout
+        var: clean_output.stdlines
 
     # ---------------------------------------------------------
     # STEP 2: Restore License After Clean
@@ -184,7 +184,7 @@
       register: preflight_output
 
     - debug:
-        var: preflight_output.stdout
+        var: preflight_output.stdlines
 
 
   
@@ -203,7 +203,7 @@
       changed_when: false
 
     - debug:
-        msg: "{{ installroot_verify.stdout }}"
+        msg: "{{ installroot_verify.stdlines }}"
 
 
     # ---------------------------------------------------------
@@ -218,5 +218,5 @@
       register: install_output
 
     - debug:
-        var: install_output.stdout
+        var: install_output.stdlines
 

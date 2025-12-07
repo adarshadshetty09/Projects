@@ -299,8 +299,6 @@ you can change `instance_count` or `attached_disk_per_instance` and Terraform au
 
 ---
 
-
-
 ## 🧩 Resource: `google_compute_resource_policy.snapshot_policy`
 
 This creates a **snapshot policy** in Google Cloud.
@@ -472,3 +470,18 @@ Once you apply this Terraform resource:
 * If you attach this policy to a disk (using `google_compute_disk_resource_policy_attachment`), the disk will **automatically follow** this snapshot rule.
 
 ---
+
+
+
+```
+User@DESKTOP-KM01E29 MINGW64 ~/Desktop/HDFC/Projects/YBA_Database_Deployment_Automation/YBA_Terraform_Cluster_V1_Success (main)
+$ gcloud compute addresses delete yba-int-ip-1 --region=us-central1 --quiet
+Deleted [https://www.googleapis.com/compute/v1/projects/apt-index-474313-e9/regions/us-central1/addresses/yba-int-ip-1].
+
+User@DESKTOP-KM01E29 MINGW64 ~/Desktop/HDFC/Projects/YBA_Database_Deployment_Automation/YBA_Terraform_Cluster_V1_Success (main)
+$
+
+```
+
+
+### gcloud compute addresses delete yb-db-int-ip-1 --region=us-central1 --quiet

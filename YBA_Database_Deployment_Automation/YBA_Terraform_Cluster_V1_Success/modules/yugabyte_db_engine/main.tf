@@ -2,8 +2,8 @@
 # Locals
 ###############################################
 locals {
-  external_ip_add   = var.enable_external_ip ? 1 : 0
-  access_config     = local.external_ip_add != 0 ? [true] : []
+  external_ip_add     = var.enable_external_ip ? 1 : 0
+  access_config       = local.external_ip_add != 0 ? [true] : []
   shielded_vm_configs = var.enable_shielded_vm ? [true] : []
 
   instance_name = [
@@ -88,7 +88,6 @@ resource "google_compute_disk" "boot_gce_disk" {
       labels,
       disk_encryption_key,
       guest_os_features,
-      source_image_id,
     ]
   }
 }
@@ -97,10 +96,10 @@ resource "google_compute_disk" "boot_gce_disk" {
 # Boot Disk Snapshot Policy Attachment
 ###############################################
 resource "google_compute_disk_resource_policy_attachment" "boot_diskpolicy_attach" {
-  count = var.enable_boot_disk_snapshot_attach ? var.instance_count : 0
-  name  = google_compute_resource_policy.snapshot_policy.name
-  disk  = google_compute_disk.boot_gce_disk[count.index].name
-  zone  = element(var.machine_zone, count.index % length(var.machine_zone))
+  count      = var.enable_boot_disk_snapshot_attach ? var.instance_count : 0
+  name       = google_compute_resource_policy.snapshot_policy.name
+  disk       = google_compute_disk.boot_gce_disk[count.index].name
+  zone       = element(var.machine_zone, count.index % length(var.machine_zone))
   depends_on = [google_compute_disk.boot_gce_disk]
 }
 
@@ -232,16 +231,16 @@ resource "google_compute_disk" "yugabyte" {
       labels,
       disk_encryption_key,
       guest_os_features,
-      source_image_id,
     ]
   }
+
 }
 
 resource "google_compute_attached_disk" "yugabyte_attach" {
-  count = var.enable_yugabyte_disk ? var.instance_count : 0
-  disk      = google_compute_disk.yugabyte[count.index].name
-  instance  = google_compute_instance.gce_vm[count.index].id
-  zone      = google_compute_disk.yugabyte[count.index].zone
+  count    = var.enable_yugabyte_disk ? var.instance_count : 0
+  disk     = google_compute_disk.yugabyte[count.index].name
+  instance = google_compute_instance.gce_vm[count.index].id
+  zone     = google_compute_disk.yugabyte[count.index].zone
 
   #  LIFECYCLE PATCH
   lifecycle {
@@ -276,16 +275,16 @@ resource "google_compute_disk" "data1" {
       labels,
       disk_encryption_key,
       guest_os_features,
-      source_image_id,
     ]
   }
+
 }
 
 resource "google_compute_attached_disk" "data1_attach" {
-  count = var.enable_data1_disk ? var.instance_count : 0
-  disk      = google_compute_disk.data1[count.index].name
-  instance  = google_compute_instance.gce_vm[count.index].id
-  zone      = google_compute_disk.data1[count.index].zone
+  count    = var.enable_data1_disk ? var.instance_count : 0
+  disk     = google_compute_disk.data1[count.index].name
+  instance = google_compute_instance.gce_vm[count.index].id
+  zone     = google_compute_disk.data1[count.index].zone
 
   #  LIFECYCLE PATCH
   lifecycle {
@@ -323,16 +322,16 @@ resource "google_compute_disk" "wal1" {
       labels,
       disk_encryption_key,
       guest_os_features,
-      source_image_id,
     ]
   }
+
 }
 
 resource "google_compute_attached_disk" "wal1_attach" {
-  count = var.enable_wal1_disk ? var.instance_count : 0
-  disk      = google_compute_disk.wal1[count.index].name
-  instance  = google_compute_instance.gce_vm[count.index].id
-  zone      = google_compute_disk.wal1[count.index].zone
+  count    = var.enable_wal1_disk ? var.instance_count : 0
+  disk     = google_compute_disk.wal1[count.index].name
+  instance = google_compute_instance.gce_vm[count.index].id
+  zone     = google_compute_disk.wal1[count.index].zone
 
   lifecycle {
     ignore_changes = [disk]
@@ -367,16 +366,16 @@ resource "google_compute_disk" "shared" {
       labels,
       disk_encryption_key,
       guest_os_features,
-      source_image_id,
     ]
   }
+
 }
 
 resource "google_compute_attached_disk" "shared_attach" {
-  count = var.enable_shared_disk ? var.instance_count : 0
-  disk      = google_compute_disk.shared[count.index].name
-  instance  = google_compute_instance.gce_vm[count.index].id
-  zone      = google_compute_disk.shared[count.index].zone
+  count    = var.enable_shared_disk ? var.instance_count : 0
+  disk     = google_compute_disk.shared[count.index].name
+  instance = google_compute_instance.gce_vm[count.index].id
+  zone     = google_compute_disk.shared[count.index].zone
 
   lifecycle {
     ignore_changes = [disk]

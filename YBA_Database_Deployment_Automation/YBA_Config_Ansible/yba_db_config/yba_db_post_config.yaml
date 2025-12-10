@@ -92,6 +92,25 @@
       # Add a handler to skip this if user/group doesn't exist
       ignore_errors: true
 
+     # Adding the tmp directories
+    - name: Ensure /mnt/yba-data exists
+      ansible.builtin.file:
+        path: /mnt/yba-data
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0755'
+
+    - name: Create tmp directory under /mnt/yba-data
+      ansible.builtin.file:
+        path: /mnt/yba-data/tmp
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0755'
+        recurse: yes
+
+
 
     - name: Check SELinux status before change
       command: getenforce
@@ -154,4 +173,3 @@
         line: 'ybaadmin      ALL=(ALL)       NOPASSWD: ALL'
         regexp: '^ybaadmin\s+'
         validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
-

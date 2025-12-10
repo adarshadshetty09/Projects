@@ -14,9 +14,6 @@ Covers:
 ✔ You only need **one certificate**
 ✔ You can use it across all nodes
 
-
-
-
 Here’s the **clear and simplest explanation** of FQDN and how it relates to your wildcard domain examples.
 
 ---
@@ -138,9 +135,6 @@ If you want, I can show you:
 ✅ how Yugabyte uses FQDN for node-to-node communication
 Just tell me!
 
-
-
-
 Let’s untangle this cleanly so it feels like sorting bright beads on a string instead of a DNS puzzle.
 
 ---
@@ -211,8 +205,6 @@ So:
 
 If you'd like, I can also draw a small diagram to make it even clearer.
 
-
-
 ## ===============================================================================================================
 
 #### Check for the SeLinux
@@ -221,14 +213,11 @@ If you'd like, I can also draw a small diagram to make it even clearer.
 getenforce
 ```
 
-
 ```
 [kaboonyugabyte@adarshadshetty1 prometheus-3.5.0.linux-amd64]$ getenforce
 Enforcing
 [kaboonyugabyte@adarshadshetty1 prometheus-3.5.0.linux-amd64]$ 
 ```
-
-
 
 Great — **we will start cleanly with Prometheus FIRST**, and then add exporters later.
 This is perfectly fine and still production-standard.
@@ -382,10 +371,6 @@ Once Prometheus is up and running, we will:
 
 Waiting for your Prometheus status output.
 
-
-
-
-
 💯 **PERFECT! Prometheus is now running cleanly as a systemd service in production mode.**
 SELinux is correct, ownership is correct, service is stable.
 
@@ -508,7 +493,6 @@ Once Node Exporter is running, we proceed to:
 
 We are building a perfect production monitoring stack.
 
-
 Correct!
 For **Node Exporter**, the user creation step:
 
@@ -612,8 +596,6 @@ Once Node Exporter is running:
 
 We are progressing perfectly toward a clean production monitoring stack.
 
-
-
 **TSDB = Time Series Database**
 
 Prometheus uses its own custom-built TSDB to store metrics data efficiently.
@@ -704,6 +686,7 @@ You can change by adding:
 
 # 📌 **Summary in simple words**
 
+
 | Term          | Meaning                                               |
 | ------------- | ----------------------------------------------------- |
 | **TSDB**      | A special database for storing time-based metric data |
@@ -727,7 +710,6 @@ I can explain:
 
 Just tell me **“Explain TSDB deeper”**.
 
-
 🎉 **Perfect! Node Exporter is now running cleanly in production mode with SELinux enforcing.**
 
 This is exactly what we want:
@@ -742,8 +724,9 @@ Prometheus + Node Exporter are now fully functional and production-ready.
 
 # ✅ **Your Monitoring Stack Status (so far)**
 
-| Component         | Status                                            |
-| ----------------- | ------------------------------------------------- |
+
+| Component         | Status                                             |
+| ----------------- | -------------------------------------------------- |
 | **Prometheus**    | ✔ Running under systemd with SELinux labels fixed |
 | **Node Exporter** | ✔ Running under systemd with correct permissions  |
 | **SELinux**       | ✔ Enforcing & working (no EXEC errors)            |
@@ -860,9 +843,6 @@ Once that is running, we will proceed:
 
 We are building a perfect production monitoring system step by step.
 
-
-
-
 ### ========================================================
 
 Ahh, now the issue is **clear**:
@@ -941,8 +921,6 @@ ls -lh cadvisor
 ```
 
 I’ll confirm everything after that.
-
-
 
 Perfect! 🎉
 Now your **cAdvisor binary is correct** (46 MB size is exactly right).
@@ -1039,9 +1017,7 @@ When you're ready, we will:
 
 Just tell me **“Next”**.
 
-
-
-## Docker must be installed 
+## Docker must be installed
 
 Great progress! 🎉
 Binary is now in the correct location — **but the ownership is still wrong**.
@@ -1134,7 +1110,6 @@ You should see the cAdvisor dashboard.
 
 ### ⭐ Tell me once done — next step is adding cAdvisor to Prometheus scrape config!
 
-
 Perfect! 🎉
 Now ownership and permissions are correct:
 
@@ -1205,3 +1180,495 @@ sudo firewall-cmd --reload
 ---
 
 When you're done, tell me — next step is **integrating cAdvisor with Prometheus**.
+
+```
+[kaboonyugabyte@adarshadshetty1 ~]$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1460 qdisc mq state UP group default qlen 1000
+    link/ether 42:01:0a:00:00:0a brd ff:ff:ff:ff:ff:ff
+    altname enp0s4
+    altname ens4
+    inet 10.0.0.10/32 scope global dynamic noprefixroute eth0
+       valid_lft 2153sec preferred_lft 2153sec
+    inet6 fe80::8470:b287:5b9e:4da/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether ce:43:9b:66:a2:e4 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::cc43:9bff:fe66:a2e4/64 scope link 
+       valid_lft forever preferred_lft forever
+4: veth9fbb023@if2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+    link/ether 0e:00:c7:6e:aa:6f brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::c00:c7ff:fe6e:aa6f/64 scope link 
+       valid_lft forever preferred_lft forever
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ ip r
+default via 10.0.0.1 dev eth0 proto dhcp src 10.0.0.10 metric 100 
+10.0.0.1 dev eth0 proto dhcp scope link src 10.0.0.10 metric 100 
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ hostnamectl 
+ Static hostname: adarshadshetty1
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 226a30feb93d46bf906bb4d1ba195044
+         Boot ID: cb461f4b63e84ff29898938b82f2a9e9
+  Virtualization: kvm
+Operating System: Red Hat Enterprise Linux 9.7 (Plow)   
+     CPE OS Name: cpe:/o:redhat:enterprise_linux:9::baseos
+          Kernel: Linux 5.14.0-611.5.1.el9_7.x86_64
+    Architecture: x86-64
+ Hardware Vendor: Google
+  Hardware Model: Google Compute Engine
+Firmware Version: Google
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ nmcli device status 
+DEVICE       TYPE      STATE                   CONNECTION     
+eth0         ethernet  connected               Wired connection 1 
+docker0      bridge    connected (externally)  docker0        
+lo           loopback  connected (externally)  lo             
+veth9fbb023  ethernet  unmanaged               --             
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+[kaboonyugabyte@adarshadshetty1 ~]$ nmcli general status 
+STATE      CONNECTIVITY  WIFI-HW  WIFI     WWAN-HW  WWAN     METERED  
+connected  full          missing  enabled  missing  enabled  no (guessed) 
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+```
+
+## nmcli device show (Network Manager Command Line Interface)
+
+```
+[kaboonyugabyte@adarshadshetty1 ~]$ nmcli device show
+GENERAL.DEVICE:                         eth0
+GENERAL.TYPE:                           ethernet
+GENERAL.HWADDR:                         42:01:0A:00:00:0A
+GENERAL.MTU:                            1460
+GENERAL.STATE:                          100 (connected)
+GENERAL.CONNECTION:                     Wired connection 1
+GENERAL.CON-PATH:                       /org/freedesktop/NetworkManager/ActiveConnection/2
+WIRED-PROPERTIES.CARRIER:               on
+IP4.ADDRESS[1]:                         10.0.0.10/32
+IP4.GATEWAY:                            10.0.0.1
+IP4.ROUTE[1]:                           dst = 10.0.0.1/32, nh = 0.0.0.0, mt = 100
+IP4.ROUTE[2]:                           dst = 0.0.0.0/0, nh = 10.0.0.1, mt = 100
+IP4.DNS[1]:                             169.254.169.254
+IP4.DOMAIN[1]:                          us-central1-a.c.apt-index-474313-e9.internal
+IP4.SEARCHES[1]:                        us-central1-a.c.apt-index-474313-e9.internal
+IP4.SEARCHES[2]:                        c.apt-index-474313-e9.internal
+IP4.SEARCHES[3]:                        google.internal
+IP6.ADDRESS[1]:                         fe80::8470:b287:5b9e:4da/64
+IP6.GATEWAY:                            --
+IP6.ROUTE[1]:                           dst = fe80::/64, nh = ::, mt = 1024
+
+GENERAL.DEVICE:                         docker0
+GENERAL.TYPE:                           bridge
+GENERAL.HWADDR:                         CE:43:9B:66:A2:E4
+GENERAL.MTU:                            1500
+GENERAL.STATE:                          100 (connected (externally))
+GENERAL.CONNECTION:                     docker0
+GENERAL.CON-PATH:                       /org/freedesktop/NetworkManager/ActiveConnection/3
+IP4.ADDRESS[1]:                         172.17.0.1/16
+IP4.GATEWAY:                            --
+IP4.ROUTE[1]:                           dst = 172.17.0.0/16, nh = 0.0.0.0, mt = 0
+IP6.ADDRESS[1]:                         fe80::cc43:9bff:fe66:a2e4/64
+IP6.GATEWAY:                            --
+IP6.ROUTE[1]:                           dst = fe80::/64, nh = ::, mt = 256
+
+GENERAL.DEVICE:                         lo
+GENERAL.TYPE:                           loopback
+GENERAL.HWADDR:                         00:00:00:00:00:00
+GENERAL.MTU:                            65536
+GENERAL.STATE:                          100 (connected (externally))
+GENERAL.CONNECTION:                     lo
+GENERAL.CON-PATH:                       /org/freedesktop/NetworkManager/ActiveConnection/1
+IP4.ADDRESS[1]:                         127.0.0.1/8
+IP4.GATEWAY:                            --
+IP6.ADDRESS[1]:                         ::1/128
+IP6.GATEWAY:                            --
+IP6.ROUTE[1]:                           dst = ::1/128, nh = ::, mt = 256
+
+GENERAL.DEVICE:                         veth9fbb023
+GENERAL.TYPE:                           ethernet
+GENERAL.HWADDR:                         0E:00:C7:6E:AA:6F
+GENERAL.MTU:                            1500
+GENERAL.STATE:                          10 (unmanaged)
+GENERAL.CONNECTION:                     --
+GENERAL.CON-PATH:                       --
+WIRED-PROPERTIES.CARRIER:               on
+IP4.GATEWAY:                            --
+IP6.ADDRESS[1]:                         fe80::c00:c7ff:fe6e:aa6f/64
+IP6.GATEWAY:                            --
+IP6.ROUTE[1]:                           dst = fe80::/64, nh = ::, mt = 256
+[kaboonyugabyte@adarshadshetty1 ~]$ 
+```
+
+
+
+
+
+Great! I’ll give you a **complete, step-by-step learning path** to master **Red Hat Enterprise Linux (RHEL) networking + security concepts** from zero to advanced — exactly how it’s taught in RHCSA + RHCE.
+
+This roadmap includes **commands, explanations, practice labs**, and real-world DevOps use cases.
+
+---
+
+# 🚀 **RHEL Networking + Security — Full Learning Roadmap**
+
+---
+
+# 🟥 **PART 1: Linux Networking Fundamentals (Beginner → Advanced)**
+
+## **1. Basics of Networking in Linux**
+
+✔ What is an IP address?
+✔ Subnet, Gateway
+✔ DNS, DHCP
+✔ TCP vs UDP
+✔ Ports & services
+
+### Practice commands:
+
+```bash
+ip a
+ip r
+hostnamectl
+nmcli device status
+nmcli general status
+```
+
+---
+
+## **2. Configure Network on RHEL (Static & DHCP)**
+
+### Check all network interfaces
+
+```bash
+nmcli device show
+```
+
+### Set static IP
+
+```bash
+sudo nmcli con mod ens192 ipv4.addresses 192.168.1.10/24
+sudo nmcli con mod ens192 ipv4.gateway 192.168.1.1
+sudo nmcli con mod ens192 ipv4.dns "8.8.8.8 1.1.1.1"
+sudo nmcli con mod ens192 ipv4.method manual
+sudo nmcli con up ens192
+```
+
+### Set DHCP
+
+```bash
+sudo nmcli con mod ens192 ipv4.method auto
+sudo nmcli con up ens192
+```
+
+---
+
+## **3. Hostname & DNS configuration**
+
+### Change hostname
+
+```bash
+sudo hostnamectl set-hostname myserver.example.com
+```
+
+### DNS resolution
+
+```bash
+cat /etc/resolv.conf
+dig google.com
+nslookup google.com
+```
+
+---
+
+## **4. Routing**
+
+Check routing table:
+
+```bash
+ip route show
+```
+
+Add a static route:
+
+```bash
+sudo nmcli connection modify ens192 +ipv4.routes "10.0.0.0/24 192.168.1.1"
+sudo nmcli connection up ens192
+```
+
+---
+
+## **5. Network Troubleshooting Tools**
+
+* `ping`
+* `traceroute`
+* `ss -tulpn`
+* `curl -I`
+* `tcpdump`
+
+Examples:
+
+### Check open ports:
+
+```bash
+sudo ss -tulnp
+```
+
+### Capture packets:
+
+```bash
+sudo tcpdump -i ens192 port 80
+```
+
+---
+
+# 🟥 **PART 2: RHEL Security Concepts (Beginner → Expert)**
+
+---
+
+# 🔐 **1. Linux Users, Groups & Permissions**
+
+### Add user
+
+```bash
+sudo useradd bob
+sudo passwd bob
+```
+
+### Check file permissions
+
+```bash
+ls -l
+chmod 755 file
+chown user:group file
+```
+
+---
+
+# 🔐 **2. SUID, SGID, Sticky Bit**
+
+### SUID
+
+```bash
+chmod 4755 /path/to/file
+```
+
+### SGID
+
+```bash
+chmod 2755 /shared/dir
+```
+
+### Sticky bit
+
+```bash
+chmod +t /shared/dir
+```
+
+(Important for `/tmp`)
+
+---
+
+# 🔐 **3. FirewallD (RHEL default firewall)**
+
+Start + enable firewall
+
+```bash
+sudo systemctl enable --now firewalld
+```
+
+Check active zones:
+
+```bash
+sudo firewall-cmd --get-active-zones
+```
+
+Allow a service:
+
+```bash
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+```
+
+Allow a port:
+
+```bash
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+```
+
+Block a subnet:
+
+```bash
+sudo firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address="10.0.0.0/24" drop'
+```
+
+---
+
+# 🔐 **4. SELinux (VERY important for Red Hat)**
+
+Check SELinux status:
+
+```bash
+sestatus
+```
+
+### SELinux modes:
+
+* enforcing
+* permissive
+* disabled
+
+Change SELinux mode (temporary):
+
+```bash
+sudo setenforce 0
+sudo setenforce 1
+```
+
+SELinux logs (troubleshooting):
+
+```bash
+sudo cat /var/log/audit/audit.log | grep denied
+```
+
+Fix SELinux with `restorecon`:
+
+```bash
+sudo restorecon -Rv /var/www/html/
+```
+
+---
+
+# 🔐 **5. SSH Hardening (Security best practices)**
+
+### Change SSH port
+
+```bash
+sudo nano /etc/ssh/sshd_config
+# Port 2222
+```
+
+### Disable root login
+
+```
+PermitRootLogin no
+```
+
+Restart SSH:
+
+```bash
+sudo systemctl restart sshd
+```
+
+---
+
+# 🔐 **6. Intrusion Detection Tools**
+
+Install AIDE:
+
+```bash
+sudo dnf install -y aide
+sudo aide --init
+```
+
+Check for file changes:
+
+```bash
+sudo aide --check
+```
+
+---
+
+# 🔐 **7. Auditd (System Activity Logging)**
+
+Enable:
+
+```bash
+sudo systemctl enable --now auditd
+```
+
+Check logs:
+
+```bash
+sudo ausearch -m avc
+```
+
+---
+
+# 🟥 **PART 3: Real-World DevOps Security**
+
+## 1. Secure Nginx using SELinux + Firewall
+
+## 2. Configure SSL/TLS certificates
+
+## 3. Set up Fail2ban
+
+## 4. Disable unused ports
+
+## 5. Secure Kubernetes nodes (if using K8s)
+
+## 6. Configure system logging with rsyslog
+
+---
+
+# 🟥 **PART 4: Practice Labs (Hands-On)**
+
+I will give you **10 labs** you can do on your RHEL VM.
+
+### **Lab 1:** Assign static IP & DNS using `nmcli`
+
+### **Lab 2:** Open port 8080 using FirewallD
+
+### **Lab 3:** Install Apache & fix SELinux error
+
+### **Lab 4:** Deny SSH from a specific IP
+
+### **Lab 5:** Capture packets using tcpdump
+
+### **Lab 6:** Create users, groups, permissions
+
+### **Lab 7:** Set SUID/SGID & sticky bit
+
+### **Lab 8:** Harden SSH configuration
+
+### **Lab 9:** Monitor logs with auditd
+
+### **Lab 10:** Configure static routing
+
+---
+
+# 🚀 I can teach you everything step-by-step
+
+Tell me what you want next:
+
+### 🔸 Do you want **Networking** first?
+
+### 🔸 Or **Security** first?
+
+### 🔸 Or do you want **full hands-on labs** one by one?
+
+Just tell me **"Networking"** or **"Security"** or **"Start labs"**.

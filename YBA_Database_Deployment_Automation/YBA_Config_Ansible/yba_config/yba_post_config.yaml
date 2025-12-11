@@ -129,6 +129,22 @@
         regexp: '^ybaadmin'
         validate: '/usr/sbin/visudo -cf %s'
 
+    # -------------------------------------------------------
+    # SSH Key Gen 
+    # --------------------------------------------------------
+    - name: Ensure .ssh directory exists
+      file:
+        path: /home/ybaadmin/.ssh
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0700'
+
+    - name: Generate RSA 4096-bit PEM key if not exists
+      command: ssh-keygen -t rsa -b 4096 -m PEM -N "" -f /home/ybaadmin/.ssh/id_rsa
+      args:
+        creates: /home/ybaadmin/.ssh/id_rsa   # prevents rerunning
+
 
     # ---------------------------------------------------------
     # YBA INSTALLATION STEPS
@@ -216,4 +232,4 @@
       register: install_output
 
     - debug:
-        var: install_output.stdout
+        var: install_output.stdout_lines

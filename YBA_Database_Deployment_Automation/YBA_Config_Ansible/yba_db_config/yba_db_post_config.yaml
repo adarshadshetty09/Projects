@@ -173,3 +173,11 @@
         line: 'ybaadmin      ALL=(ALL)       NOPASSWD: ALL'
         regexp: '^ybaadmin\s+'
         validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
+
+    - name: Allow 'yugabyte' user to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: 'yugabyte      ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^yugabyte\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid

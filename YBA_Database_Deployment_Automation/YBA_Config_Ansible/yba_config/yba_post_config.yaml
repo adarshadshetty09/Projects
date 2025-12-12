@@ -21,26 +21,26 @@
     # ---------------------------------------------------------
 
     - name: Check if /dev/sdb1 already exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ partition_device }}"
       register: sdb1_check
 
     - name: Create GPT label (first time only)
-      command: "parted -s {{ disk_device }} mklabel gpt"
+      ansible.builtin.command: "parted -s {{ disk_device }} mklabel gpt"
       when: not sdb1_check.stat.exists
 
     - name: Create primary ext4 partition (first time only)
-      command: "parted -s {{ disk_device }} mkpart primary ext4 0% 100%"
+      ansible.builtin.command: "parted -s {{ disk_device }} mkpart primary ext4 0% 100%"
       when: not sdb1_check.stat.exists
 
     - name: Check filesystem on /dev/sdb1
-      command: "blkid -o value -s TYPE {{ partition_device }}"
+      ansible.builtin.command: "blkid -o value -s TYPE {{ partition_device }}"
       register: fs_check
       failed_when: false
       changed_when: false
 
     - name: Create ext4 filesystem only if none exists
-      command: "mkfs -t {{ filesystem_type }} {{ partition_device }}"
+      ansible.builtin.command: "mkfs -t {{ filesystem_type }} {{ partition_device }}"
       when: fs_check.stdout == ""
 
     - name: Ensure mount directory exists
@@ -50,7 +50,7 @@
         mode: '0755'
 
     - name: Get UUID of /dev/sdb1
-      command: "blkid -s UUID -o value {{ partition_device }}"
+      ansible.builtin.command: "blkid -s UUID -o value {{ partition_device }}"
       register: disk_uuid
 
     - name: Add fstab entry for /mnt/yba
@@ -60,30 +60,30 @@
         state: present
 
     - name: Mount all entries from fstab
-      command: mount -a
+      ansible.builtin.command: mount -a
 
     # ---------------------------------------------------------
     # SELINUX SETTINGS
     # ---------------------------------------------------------
 
     - name: Check SELinux status before change
-      command: getenforce
+      ansible.builtin.command: getenforce
       register: selinux_before
 
     - name: Print SELinux status (before)
-      debug:
+      ansible.builtin.debug:
         msg: "SELinux status before: {{ selinux_before.stdout }}"
 
     - name: Set SELinux to permissive
-      command: setenforce 0
+      ansible.builtin.command: setenforce 0
       when: selinux_before.stdout != "Permissive"
 
     - name: Check SELinux status after change
-      command: getenforce
+      ansible.builtin.command: getenforce
       register: selinux_after
 
     - name: Print SELinux status (after)
-      debug:
+      ansible.builtin.debug:
         msg: "SELinux status after: {{ selinux_after.stdout }}"
 
     # ---------------------------------------------------------
@@ -91,7 +91,7 @@
     # ---------------------------------------------------------
 
     - name: Ensure PublickeyAuthentication is yes
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PubkeyAuthentication\s+'
         line: "PubkeyAuthentication yes"
@@ -99,7 +99,7 @@
         state: present
         
     - name: Disable PasswordAuthentication
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?PasswordAuthentication\s+'
         line: "PasswordAuthentication no"
@@ -107,7 +107,7 @@
         state: present
 
     - name: Restart sshd
-      service:
+      ansible.builtin.service:
         name: sshd
         state: restarted
 
@@ -116,14 +116,14 @@
     # ---------------------------------------------------------
 
     - name: Allow wheel group passwordless sudo
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/sudoers
         line: '%wheel ALL=(ALL) NOPASSWD: ALL'
         regexp: '^%wheel'
         validate: '/usr/sbin/visudo -cf %s'
 
     - name: Allow ybaadmin passwordless sudo
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/sudoers
         line: 'ybaadmin ALL=(ALL) NOPASSWD: ALL'
         regexp: '^ybaadmin'
@@ -132,8 +132,10 @@
     # -------------------------------------------------------
     # SSH Key Gen 
     # --------------------------------------------------------
+
     - name: Ensure .ssh directory exists
-      file:
+      become: yes
+      ansible.builtin.file:
         path: /home/ybaadmin/.ssh
         state: directory
         owner: ybaadmin
@@ -141,17 +143,18 @@
         mode: '0700'
 
     - name: Generate RSA 4096-bit PEM key if not exists
-      command: ssh-keygen -t rsa -b 4096 -m PEM -N "" -f /home/ybaadmin/.ssh/id_rsa
+      become: yes
+      become_user: ybaadmin
+      ansible.builtin.command: ssh-keygen -t rsa -b 4096 -m PEM -N "" -f /home/ybaadmin/.ssh/id_rsa
       args:
-        creates: /home/ybaadmin/.ssh/id_rsa   # prevents rerunning
-
+        creates: /home/ybaadmin/.ssh/id_rsa
 
     # ---------------------------------------------------------
     # YBA INSTALLATION STEPS
     # ---------------------------------------------------------
 
     - name: Ensure license file exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ license_src }}"
       register: lic_check
 
@@ -160,7 +163,7 @@
       when: not lic_check.stat.exists
 
     - name: Backup license to /tmp
-      copy:
+      ansible.builtin.copy:
         src: "{{ license_src }}"
         dest: "/tmp/yba.lic"
         mode: '0644'
@@ -168,24 +171,25 @@
 
     # CLEAN
     - name: Run yba-ctl clean
-      command: ./yba-ctl clean --all --force
+      ansible.builtin.command: ./yba-ctl clean --all --force
       args:
         chdir: "{{ yba_dir }}"
       register: clean_output
       failed_when: false
 
-    - debug:
-        var: clean_output.stdout
+    - name: Run yba-ctl clean msg
+      ansible.builtin.debug:
+        var: clean_output.stdout_lines
 
     # RESTORE LICENSE
     - name: Ensure /opt/yba-ctl exists
-      file:
+      ansible.builtin.file:
         path: "{{ yba_opt_dir }}"
         state: directory
         mode: '0755'
 
     - name: Restore license to /opt/yba-ctl/
-      copy:
+      ansible.builtin.copy:
         src: "/tmp/yba.lic"
         dest: "{{ yba_opt_dir }}/yba.lic"
         owner: ybaadmin
@@ -195,41 +199,44 @@
 
     # PREFLIGHT
     - name: Run preflight
-      command: >
+      ansible.builtin.command: >
         ./yba-ctl --skip_preflight {{ skip_preflight }}
         preflight --force
       args:
         chdir: "{{ yba_dir }}"
       register: preflight_output
 
-    - debug:
-        var: preflight_output.stdout
+    - name: Run preflight msg
+      ansible.builtin.debug:
+        var: preflight_output.stdout_lines
 
 
     # UPDATE installRoot
     - name: Update installRoot in yba-ctl.yml
-      replace:
+      ansible.builtin.replace:
         path: /opt/yba-ctl/yba-ctl.yml
         regexp: '^installRoot:.*'
         replace: 'installRoot: "/mnt/yba"'
 
     - name: Verify installRoot
-      shell: "grep '^installRoot' /opt/yba-ctl/yba-ctl.yml"
+      ansible.builtin.shell: "grep '^installRoot' /opt/yba-ctl/yba-ctl.yml"
       register: installroot_verify
       changed_when: false
 
-    - debug:
+    - name: Verify InstallRoot msg
+      ansible.builtin.debug:
         msg: "{{ installroot_verify.stdout }}"
 
 
     # INSTALL
     - name: Run yba-ctl install
-      command: >
+      ansible.builtin.command: >
         ./yba-ctl --skip_preflight {{ skip_preflight }}
         install --force
       args:
         chdir: "{{ yba_dir }}"
       register: install_output
 
-    - debug:
+    - name: install_output msg  
+      ansible.builtin.debug:
         var: install_output.stdout_lines

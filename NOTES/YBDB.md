@@ -954,3 +954,131 @@ Indexes:
 
 aashu=# 
 ```
+
+
+
+
+
+
+
+```
+
+```
+
+[kaboonyugabyte@yba1 ~]$ sudo ssh -i /mnt/yba/data/yb-platform/keys/36f38173-0806-4264-9171-42b3dec9417b/ybaadmin.pem -ostricthostkeychecking=no -p 22 yugabyte@11.0.0.12
+Last login: Fri Dec 12 13:54:20 2025 from 11.0.0.10
+Use 'systemctl --user' to manage YB software
+[yugabyte@yb-db-node1 ~]$ SELECT datname, pid, application_name, state, query
+FROM pg_stat_activity
+WHERE state = 'active';^C
+[yugabyte@yb-db-node1 ~]$ tserver/bin/ysqlsh -h $(hostname -y)
+ysqlsh: warning: extra command-line argument "name" ignored
+ysqlsh: warning: extra command-line argument "not" ignored
+ysqlsh: warning: extra command-line argument "set" ignored
+ysqlsh: could not translate host name "hostname:" to address: Name or service not known
+[yugabyte@yb-db-node1 ~]$ tserver/bin/ysqlsh -h $(hostname -i)
+ysqlsh (11.2-YB-2024.2.5.1-b0)
+Type "help" for help.
+
+yugabyte=# \c aashu
+You are now connected to database "aashu" as user "yugabyte".
+aashu=# SELECT datname, pid, application_name, state, query
+aashu-# FROM pg_stat_activity
+aashu-# WHERE state = 'active';
+datname |  pid   | application_name | state  |                        query
+---------+--------+------------------+--------+-----------------------------------------------------
+aashu   |  77586 | ysqlsh           | active | INSERT INTO dummy_data (username, email)           +
+|        |                  |        | SELECT                                             +
+|        |                  |        |     'NewUser_' || i AS username,                   +
+|        |                  |        |     'user' || i || '@example.com' AS email         +
+|        |                  |        | FROM generate_series(1, 100000000) AS s(i);
+aashu   |  83622 | ysqlsh           | active | INSERT INTO dummy_data (username, email)           +
+|        |                  |        | SELECT                                             +
+|        |                  |        |     'NewUser_' || i AS username,                   +
+|        |                  |        |     'user' || i || '@example.com' AS email         +
+|        |                  |        | FROM generate_series(1, 100000000) AS s(i);
+aashu   | 141388 | ysqlsh           | active | SELECT datname, pid, application_name, state, query+
+|        |                  |        | FROM pg_stat_activity                              +
+|        |                  |        | WHERE state = 'active';
+(3 rows)
+
+aashu=# SELECT pg_terminate_backend(77586);
+pg_terminate_backend
+--------------------
+
+t
+(1 row)
+
+aashu=# SELECT pg_terminate_backend(83622);
+pg_terminate_backend
+--------------------
+
+t
+(1 row)
+
+aashu=# SELECT datname, pid, application_name, state, query
+aashu-# FROM pg_stat_activity
+aashu-# WHERE state = 'active';
+datname |  pid   | application_name | state  |                        query
+---------+--------+------------------+--------+-----------------------------------------------------
+aashu   |  77586 | ysqlsh           | active | INSERT INTO dummy_data (username, email)           +
+|        |                  |        | SELECT                                             +
+|        |                  |        |     'NewUser_' || i AS username,                   +
+|        |                  |        |     'user' || i || '@example.com' AS email         +
+|        |                  |        | FROM generate_series(1, 100000000) AS s(i);
+aashu   |  83622 | ysqlsh           | active | INSERT INTO dummy_data (username, email)           +
+|        |                  |        | SELECT                                             +
+|        |                  |        |     'NewUser_' || i AS username,                   +
+|        |                  |        |     'user' || i || '@example.com' AS email         +
+|        |                  |        | FROM generate_series(1, 100000000) AS s(i);
+aashu   | 141388 | ysqlsh           | active | SELECT datname, pid, application_name, state, query+
+|        |                  |        | FROM pg_stat_activity                              +
+|        |                  |        | WHERE state = 'active';
+(3 rows)
+
+aashu=# \q
+[yugabyte@yb-db-node1 ~]$ tserver/bin/ysqlsh -h $(hostname -i)
+ysqlsh (11.2-YB-2024.2.5.1-b0)
+Type "help" for help.
+
+yugabyte=# \c aashu
+You are now connected to database "aashu" as user "yugabyte".
+aashu=# SELECT datname, pid, application_name, state, query
+aashu-# FROM pg_stat_activity
+aashu-# WHERE state = 'active';
+datname |  pid   | application_name | state  |                        query
+---------+--------+------------------+--------+-----------------------------------------------------
+aashu   | 141868 | ysqlsh           | active | SELECT datname, pid, application_name, state, query+
+|        |                  |        | FROM pg_stat_activity                              +
+|        |                  |        | WHERE state = 'active';
+(1 row)
+
+aashu=#
+
+
+
+
+
+To stop those two long‑running `INSERT ... generate_series` queries, terminate their backends using `pg_terminate_backend`.
+
+You already have the PIDs:
+
+* 77586
+* 83622
+
+Run this in the same `aashu` database (as a superuser or suitable admin):
+
+```sql
+SELECT pg_terminate_backend(77586);
+SELECT pg_terminate_backend(83622);
+```
+
+`pg_terminate_backend` returns `t` on success and `f` on failure. [[Live queries example](https://docs.yugabyte.com/stable/explore/observability/pg-stat-activity/#examples)]
+
+Then confirm they’re gone:
+
+```sql
+SELECT datname, pid, application_name, state, query
+FROM pg_stat_activity
+WHERE state = 'active';
+```

@@ -1242,11 +1242,11 @@ Firmware Version: Google
 [kaboonyugabyte@adarshadshetty1 ~]$ 
 [kaboonyugabyte@adarshadshetty1 ~]$ 
 [kaboonyugabyte@adarshadshetty1 ~]$ nmcli device status 
-DEVICE       TYPE      STATE                   CONNECTION     
+DEVICE       TYPE      STATE                   CONNECTION   
 eth0         ethernet  connected               Wired connection 1 
-docker0      bridge    connected (externally)  docker0        
-lo           loopback  connected (externally)  lo             
-veth9fbb023  ethernet  unmanaged               --             
+docker0      bridge    connected (externally)  docker0      
+lo           loopback  connected (externally)  lo           
+veth9fbb023  ethernet  unmanaged               --           
 [kaboonyugabyte@adarshadshetty1 ~]$ 
 [kaboonyugabyte@adarshadshetty1 ~]$ 
 [kaboonyugabyte@adarshadshetty1 ~]$ 
@@ -1322,10 +1322,6 @@ IP6.GATEWAY:                            --
 IP6.ROUTE[1]:                           dst = fe80::/64, nh = ::, mt = 256
 [kaboonyugabyte@adarshadshetty1 ~]$ 
 ```
-
-
-
-
 
 Great! I’ll give you a **complete, step-by-step learning path** to master **Red Hat Enterprise Linux (RHEL) networking + security concepts** from zero to advanced — exactly how it’s taught in RHCSA + RHCE.
 
@@ -1672,3 +1668,194 @@ Tell me what you want next:
 ### 🔸 Or do you want **full hands-on labs** one by one?
 
 Just tell me **"Networking"** or **"Security"** or **"Start labs"**.
+
+
+
+
+
+
+Got it — **since this is PROD**, you should **NOT** switch SELinux to permissive unless your security/compliance team explicitly allows it.
+
+For **production**, the **correct and audit-safe solution** is to **keep SELinux enforcing** and **fix it properly with persistent SELinux policies**.
+
+Below is the **PROD-GRADE, PERMANENT FIX** ✅
+This is exactly how you should handle it in regulated environments.
+
+---
+
+# ✅ PROD-SAFE PERMANENT FIX (SELinux Enforcing)
+
+## Why this is the right approach
+
+* Keeps **SELinux = Enforcing**
+* Survives **VM reboot / stop-start**
+* Passes **security audits**
+* No data loss
+* No YBA reinstall
+
+Your error is **EXEC permission denied**, which means:
+
+> SELinux does not allow execution of binaries under `/mnt/yba`
+
+We fix that **explicitly**.
+
+---
+
+## 1️⃣ Install SELinux management tools (one-time)
+
+```bash
+sudo dnf install -y policycoreutils-python-utils
+```
+
+---
+
+## 2️⃣ Label YBA binaries as executable (CRITICAL)
+
+```bash
+sudo semanage fcontext -a -t bin_t "/mnt/yba/software(/.*)?"
+sudo restorecon -Rv /mnt/yba/software
+```
+
+✔ This allows `pg_ctl`, `java`, `prometheus`, etc. to execute.
+
+---
+
+## 3️⃣ Label Postgres data directories correctly
+
+```bash
+sudo semanage fcontext -a -t postgresql_db_t "/mnt/yba/data(/.*)?"
+sudo restorecon -Rv /mnt/yba/data
+```
+
+✔ This allows Postgres to read/write data safely.
+
+---
+
+## 4️⃣ Label runtime sockets & logs (important)
+
+```bash
+sudo semanage fcontext -a -t postgresql_var_run_t "/mnt/yba/data/pgsql/run(/.*)?"
+sudo semanage fcontext -a -t var_log_t "/mnt/yba/data/logs(/.*)?"
+
+sudo restorecon -Rv /mnt/yba/data/pgsql
+sudo restorecon -Rv /mnt/yba/data/logs
+```
+
+---
+
+## 5️⃣ Restart services (order matters)
+
+```bash
+sudo systemctl restart postgres
+sleep 10
+sudo systemctl restart prometheus
+sleep 5
+sudo systemctl restart yb-platform
+```
+
+---
+
+## 6️⃣ Verify everything
+
+```bash
+sudo yba-ctl status
+getenforce
+```
+
+Expected:
+
+```
+SELinux status: Enforcing
+postgres     Running
+prometheus   Running
+yb-platform  Running
+```
+
+---
+
+## 7️⃣ Confirm no SELinux denials (audit check)
+
+```bash
+sudo ausearch -m avc -ts recent
+```
+
+✅ **No output = clean PROD state**
+
+---
+
+# 🔒 HARDENING (Recommended for PROD)
+
+### Ensure mount survives reboot
+
+Check `/etc/fstab`:
+
+```bash
+grep /mnt/yba /etc/fstab
+```
+
+Should **NOT** include `noexec`.
+
+---
+
+### Ensure services start after mount
+
+```bash
+sudo systemctl edit postgres
+```
+
+Add:
+
+```
+[Unit]
+RequiresMountsFor=/mnt/yba
+```
+
+Repeat for:
+
+```bash
+sudo systemctl edit prometheus
+sudo systemctl edit yb-platform
+```
+
+This prevents race conditions on reboot.
+
+---
+
+# ❌ What NOT to do in PROD
+
+
+| Action                    | Why                |
+| ------------------------- | ------------------ |
+| `setenforce 0`permanently | Audit failure      |
+| `chmod 777`               | SELinux ignores it |
+| Reinstall YBA             | Data loss risk     |
+| Disable SELinux           | Security violation |
+
+---
+
+# 🧠 Why this happened
+
+* YBA installs under `/mnt/yba` (non-standard path)
+* SELinux blocks execution outside trusted contexts
+* Reboot re-enforces policies
+* systemd blocks `pg_ctl` at kernel level
+
+---
+
+# ✅ Final PROD Recommendation
+
+✔ Keep **SELinux enforcing**
+✔ Apply **explicit SELinux contexts**
+✔ Add **mount dependency to systemd**
+✔ Reboot-safe, audit-safe, stable
+
+---
+
+If you want, next I can:
+
+* 🔐 Generate a **custom SELinux module** (`audit2allow`)
+* 📋 Review your setup against **Yugabyte PROD best practices**
+* 🧪 Simulate a **reboot test safely**
+* 🧠 Provide a **one-page PROD SOP** for your team
+
+Just tell me 👍

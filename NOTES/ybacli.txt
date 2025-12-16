@@ -1,0 +1,447 @@
+./yba register \
+  -f \
+  -n admin \
+  -e admin@gmail.com \
+  -p 'Admin123$$$' \
+  --environment dev \
+  -H https://34.174.36.233:443
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba register \
+  -f \
+  -n admin \
+  -e admin@gmail.com \
+  -p 'Admin123$$$' \
+  --environment dev \
+  -H https://34.174.36.233:443
+
+No config was found a new one will be created.
+
+Configuration file '$HOME/.yba-cli.yaml' sucessfully updated.
+Customer UUID                          API Token
+c8d8b4f8-5f55-4ffc-883f-a5aaab711055   3.6700572f-a184-4ea6-9b1c-e86e5ccdad19.af8b0d08-2e60-44f9-a6be-43db9e8ceb33
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem create \
+  --name gcp-provider \
+  --region region-name=south-asia \
+  --zone zone-name=blr1::region-name=south-asia \
+  --ssh-user ybaadmin \
+  --ssh-keypair-name ybaadmin \
+  --ssh-keypair-file-path /home/ybaadmin/.ssh/id_rsa
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem create \
+  --name gcp-provider \
+  --region region-name=south-asia \
+  --zone zone-name=blr1::region-name=south-asia \
+  --ssh-user ybaadmin \
+  --ssh-keypair-name ybaadmin \
+  --ssh-keypair-file-path /home/ybaadmin/.ssh/id_rsa
+Waiting for provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c) to be created
+The provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c) has been created
+Name           Code      UUID                                   Regions      SSH User   SSH Port   Status
+gcp-provider   onprem    65e51768-d223-405b-a43a-fac2f56e4e2c   south-asia   ybaadmin   22         Ready
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem instance-type add \
+  --name gcp-provider \
+  --instance-type-name db-node-1 \
+  --num-cores 2 \
+  --mem-size 10 \
+  --volume mount-points=/mnt/yba-data::size=10::type=SSD
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem instance-type add   --name gcp-provider   --instance-type-name db-node-1   --num-cores 2   --mem-size 10   --volume mount-points=/mnt/yba-data::size=10::type=SSDsize 10   --volume mount-points=/m
+The instance type db-node-1 has been added to provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c)
+Name        Provider UUID                          Cores     Memory Size in GB
+db-node-1   65e51768-d223-405b-a43a-fac2f56e4e2c   2         10
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.12 \
+  --instance-type db-node-1 \
+  --region south-asia \
+  --zone blr1 \
+  --node-name db-node-1
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.11 \
+  --instance-type db-node-1 \
+  --region south-asia \
+  --zone blr1 \
+  --node-name db-node-1
+The node instance 11.0.0.11 has been added to provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c)
+IP          Node Name   Node UUID                              Region       Zone      Instance Type   Universe Name
+11.0.0.11   db-node-1   3071cf3c-7b07-45aa-8a50-b4e524fc21ba   south-asia   blr1      db-node-1       Not Used
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem node remove \
+  --name gcp-provider \
+  --ip 11.0.0.11 \
+  --force \
+  -H https://34.174.36.233:443
+
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba universe list 
+Name          Provider Code   UUID                                   Number of nodes   Replication Factor   YugabyteDB Version   State
+universe-pr   onprem          feb21c00-3b10-4e26-8e67-892ab7c93446   1                 1                    2024.2.5.1-b1        Loading
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba universe delete \
+  --name universe-pr \
+  -H https://34.174.36.233:443
+? Are you sure you want to delete universe: universe-pr Yes
+Waiting for universe universe-pr (feb21c00-3b10-4e26-8e67-892ab7c93446) to be deleted
+The universe universe-pr (feb21c00-3b10-4e26-8e67-892ab7c93446) has been deleted
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+./yba universe delete \
+  --name universe-pr \
+  -H https://34.174.36.233:443
+
+
+
+
+./yba universe create \
+  --name universe-pr \
+  --yb-db-version 2024.2.5.1-b1 \
+  --provider-code onprem \
+  --provider-name gcp-provider \
+  --replication-factor 1 \
+  --num-nodes 1 \
+  --regions "south-asia" \
+  --instance-type db-node-1 \
+  --assign-public-ip=false \
+  --enable-ysql=true \
+  --enable-ycql=false \
+  --enable-node-to-node-encrypt=false \
+  --enable-client-to-node-encrypt=false \
+  --master-gflags '{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}' \
+  --tserver-gflags '{"primary":{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}}' \
+  -H https:/34.174.41.251/:443
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=============================================================================  BackUp ====================================================================================
+
+
+./yba storage-config gcs create \
+  --name gcs-backup-iam \
+  --backup-location gs://awsdevopsadarshadshetty \
+  --use-gcp-iam \
+  -H https://34.174.36.233:443
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba storage-config gcs create \
+  --name gcs-backup-iam \
+  --backup-location gs://awsdevopsadarshadshetty \
+  --use-gcp-iam \
+  -H https://34.174.36.233:443
+The storage configuration gcs-backup-iam (9d75343b-a1b4-4813-bfa4-56d31232233f) has been created
+Name             Code      UUID                                   Backup Location                Status
+gcs-backup-iam   GCS       9d75343b-a1b4-4813-bfa4-56d31232233f   gs://awsdevopsadarshadshetty   Not in use
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+
+./yba backup create \
+  --universe-name universe-pr \
+  --storage-config-name gcs-backup-iam \
+  --table-type ysql \
+  --time-before-delete-in-ms 86400000 \
+  -H https://34.174.36.233:443
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba backup create \
+  --universe-name universe-pr \
+  --storage-config-name gcs-backup-iam \
+  --table-type ysql \
+  --time-before-delete-in-ms 86400000 \
+  -H https://34.174.36.233:443
+
+Waiting for backup task 517abb45-0b6d-4df6-ae6c-5faa2f6d7a9e on universe universe-pr (bea6f81a-3625-4302-8f87-4155b1103056) to be completed
+Backup UUID                            Universe                                            Storage Configuration                                  Storage Configuration Type   KMS configuration   Backup Type        Completion Time                   Has Incremental Backups   State
+5c22f00e-eb64-4095-81de-65bfc70e524a   universe-pr(bea6f81a-3625-4302-8f87-4155b1103056)   gcs-backup-iam(9d75343b-a1b4-4813-bfa4-56d31232233f)   GCS                                              PGSQL_TABLE_TYPE   Sat, 13 Dec 2025 08:42:56 +0000   false                     Completed
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+=====================================================================================================================================\
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba universe node list \
+  --name universe-pr \
+  -H https://34.174.36.233:443
+Node Name               Node UUID                              IP          State     Is Master process running   Is Tserver process running   Master state
+yb-dev-universe-pr-n1   d7d8fd99-6fd2-4a49-ae2f-38b351f446be   11.0.0.12   Live      true                        true                         
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+==================================================================================================================================================================
+
+
+
+
+
+======================================  D R =====================================
+
+### Add region 
+
+./yba provider onprem update \
+  --name gcp-provider \
+  --add-zone "zone-name=hyd1::region-name=south-asia" \
+  -H https://34.174.36.233:443
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem update \
+  --name gcp-provider \
+  --add-zone "zone-name=mum1::region-name=south-asia" \
+  -H https://34.174.36.233:443
+Waiting for provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c) to be updated
+The provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c) has been updated
+Name           Code      UUID                                   Regions      SSH User   SSH Port   Status
+gcp-provider   onprem    65e51768-d223-405b-a43a-fac2f56e4e2c   south-asia   ybaadmin   22         Ready
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem instance-type add \
+  --name gcp-provider \
+  --instance-type-name db-xcluster-node-1 \
+  --num-cores 2 \
+  --mem-size 10 \
+  --volume mount-points=/mnt/yba-data::size=10::type=SSD
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem instance-type add \
+  --name gcp-provider \
+  --instance-type-name db-dr-node-1 \
+  --num-cores 2 \
+  --mem-size 10 \
+  --volume mount-points=/mnt/yba-data::size=10::type=SSD
+The instance type db-dr-node-1 has been added to provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c)
+Name           Provider UUID                          Cores     Memory Size in GB
+db-dr-node-1   65e51768-d223-405b-a43a-fac2f56e4e2c   2         10
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+./yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.14 \
+  --instance-type db-xcluster-node-1 \
+  --region south-asia \
+  --zone hyd1 \
+  --node-name db-xcluster-node-1 \
+  -a 3.6700572f-a184-4ea6-9b1c-e86e5ccdad19.281392e2-cd53-4104-aada-cadaa21a62fb
+  
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.13 \
+  --instance-type db-dr-node-1 \
+  --region south-asia \
+  --zone mum1 \
+  --node-name db-dr-node-1
+The node instance 11.0.0.13 has been added to provider gcp-provider (65e51768-d223-405b-a43a-fac2f56e4e2c)
+IP          Node Name      Node UUID                              Region       Zone      Instance Type   Universe Name
+11.0.0.13   db-dr-node-1   c885d040-f63a-4a7b-b131-b5dad569ad28   south-asia   mum1      db-dr-node-1    Not Used
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+./yba universe create \
+  --name universe-xcluster \
+  --yb-db-version 2024.2.5.1-b1 \
+  --provider-code onprem \
+  --provider-name gcp-provider \
+  --replication-factor 1 \
+  --num-nodes 1 \
+  --regions "south-asia" \
+  --instance-type db-xcluster-node-1 \
+  --assign-public-ip=false \
+  --enable-ysql=true \
+  --enable-ycql=false \
+  --enable-node-to-node-encrypt=false \
+  --enable-client-to-node-encrypt=false \
+  --master-gflags '{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}' \
+  --tserver-gflags '{"primary":{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}}' \
+  -H https://34.174.36.233:443\
+  -a 3.6700572f-a184-4ea6-9b1c-e86e5ccdad19.281392e2-cd53-4104-aada-cadaa21a62fb
+
+
+
+./yba universe delete \
+  --name universe-dr \
+  -H https://34.174.36.233:443
+
+
+=====================================================================================================
+
+
+./yba universe table list \
+  --name universe-pr \
+  -H https://34.174.36.233:443
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# ./yba universe table list \
+  --name universe-pr \
+  -H https://34.174.36.233:443
+Table Name   Table UUID                             Table Type         SST size (in bytes)   WAL Size (in bytes)   KeySpace   PG Schema Name
+dummy_data   00004000-0000-3000-8000-000000004002   PGSQL_TABLE_TYPE   38554676.00           33619003.00           aashu      public
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+
+
+
+
+./yba xcluster list \
+  --source-universe-name universe-pr \
+  --target-universe-name universe-dr \
+  -H https://34.174.36.233:443 \
+  -a 3.6700572f-a184-4ea6-9b1c-e86e5ccdad19.281392e2-cd53-4104-aada-cadaa21a62fb
+
+
+
+
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# curl -k -X POST \
+  "$YBA_HOST/api/v1/customers/$CUSTOMER_UUID/dr_configs/$DR_CONFIG_UUID/switchover" \
+  -H "X-AUTH-YW-API-TOKEN: $YBA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "primaryUniverseUuid": "'"$TARGET_UNIVERSE_UUID"'",
+    "drReplicaUniverseUuid": "'"$SOURCE_UNIVERSE_UUID"'"
+  }'
+{"taskUUID":"9435e4e1-5160-49f6-9df9-9aaf70397e31","resourceUUID":"a0f6420c-ae78-467d-a0bc-9475afe878bb"} 
+
+
+
+
+
+curl -k -X POST \
+  "$YBA_HOST/api/v1/customers/$CUSTOMER_UUID/dr_configs/$DR_CONFIG_UUID/switchover" \
+  -H "X-AUTH-YW-API-TOKEN: $YBA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "primaryUniverseUuid": "'"$TARGET_UNIVERSE_UUID"'",
+    "drReplicaUniverseUuid": "'"$SOURCE_UNIVERSE_UUID"'"
+  }'
+
+
+
+
+
+
+
+./yba xcluster create --name xcluster-pr-xr \
+	--source-universe-name universe-pr \
+	--target-universe-name universe-xcluster \
+	--table-uuids 00004000-0000-3000-8000-000000004002 \
+	--storage-config-name gcs-backup-iam
+
+
+
+
+
+
+
+
+
+
+
+
+curl -k -X POST \
+  "$YBA_HOST/api/v1/customers/$CUSTOMER_UUID/xcluster_configs" \
+  -H "X-AUTH-YW-API-TOKEN: $YBA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "pr-to-xcluster-shetty",
+    "sourceUniverseUUID": "'"$SOURCE_UNIVERSE_UUID"'",
+    "targetUniverseUUID": "'"$TARGET_UNIVERSE_UUID"'",
+    "tableType": "YSQL",
+    "tables": [
+      "00004001-0000-3000-8000-000000004002"
+    ],
+    "bootstrapParams": {
+      "allowBootstrap": true,
+      "tables": [
+        "00004001-0000-3000-8000-000000004002"
+      ],
+      "backupRequestParams": {
+        "storageConfigUUID": "'"$BACKUP_CONFIG_UUID"'"
+      }
+    }
+  }'
+
+
+
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# curl -k -X POST \
+  "$YBA_HOST/api/v1/customers/$CUSTOMER_UUID/xcluster_configs" \
+  -H "X-AUTH-YW-API-TOKEN: $YBA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "pr-to-xcluster-shetty",
+    "sourceUniverseUUID": "'"$SOURCE_UNIVERSE_UUID"'",
+    "targetUniverseUUID": "'"$TARGET_UNIVERSE_UUID"'",
+    "tableType": "YSQL",
+    "tables": [
+      "00004001-0000-3000-8000-000000004002"
+    ],
+    "bootstrapParams": {
+      "allowBootstrap": true,
+      "tables": [
+        "00004001-0000-3000-8000-000000004002"
+      ],
+      "backupRequestParams": {
+        "storageConfigUUID": "'"$BACKUP_CONFIG_UUID"'"
+      }
+    }
+  }'
+{"taskUUID":"cda71a37-f3c4-458a-bbe2-82c56bb72769","resourceUUID":"b9c31f66-6446-4025-a38e-12ed81105d81"}[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+[root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
+
+

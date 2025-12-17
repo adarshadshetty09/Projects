@@ -445,3 +445,106 @@ curl -k -X POST \
 [root@yba1 yba_cli-2024.2.5.1-b1-linux-amd64]# 
 
 
+
+
+
+
+
+
+
+
+============================================================ Three Nodes Cluster ===============================================================
+
+yba register \
+  -f \
+  -n admin \
+  -e admin@gmail.com \
+  -p 'Admin123$$$' \
+  --environment dev \
+  -H https://34.174.153.78:443
+  --insecure
+
+
+[root@yba1 ~]# yba register \
+  -f \
+  -n admin \
+  -e admin@gmail.com \
+  -p 'Admin123$$$' \
+  --environment dev \
+  -H https://34.174.153.78:443 \
+  --insecure
+
+Configuration file '/root/.yba-cli/.yba-cli.yaml' successfully updated.
+Customer UUID                          API Token
+374c1968-8592-4e88-b9af-6f57b48dda6e   3.***********************************************************************c5
+[root@yba1 ~]#
+
+
+yba provider onprem create \
+  --name gcp-provider \
+  --region region-name=south-asia \
+  --zone zone-name=mum1::region-name=south-asia \
+  --zone zone-name=mum2::region-name=south-asia \
+  --zone zone-name=mum3::region-name=south-asia \
+  --ssh-user ybaadmin \
+  --ssh-keypair-name ybaadmin \
+  --ssh-keypair-file-path /home/ybaadmin/.ssh/id_rsa
+
+
+
+yba provider onprem instance-type add \
+  --name gcp-provider \
+  --instance-type-name db-nodes \
+  --num-cores 2 \
+  --mem-size 10 \
+  --volume mount-points=/mnt/yba-data::size=10::type=SSD
+
+
+
+
+
+yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.11 \
+  --instance-type db-nodes\
+  --region south-asia \
+  --zone mum1 \
+  --node-name db-node-1
+
+
+yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.12 \
+  --instance-type db-nodes\
+  --region south-asia \
+  --zone mum1 \
+  --node-name db-node-2
+
+
+yba provider onprem node add \
+  --name gcp-provider \
+  --ip 11.0.0.13 \
+  --instance-type db-nodes\
+  --region south-asia \
+  --zone mum1 \
+  --node-name db-node-3
+
+
+
+yba universe create \
+  --name universe-pr \
+  --yb-db-version 2024.2.5.1-b1 \
+  --provider-code onprem \
+  --provider-name gcp-provider \
+  --replication-factor 3 \
+  --num-nodes 3 \
+  --regions "south-asia" \
+  --instance-type db-nodes\
+  --assign-public-ip=false \
+  --enable-ysql=true \
+  --enable-ycql=false \
+  --enable-node-to-node-encrypt=false \
+  --enable-client-to-node-encrypt=false \
+  --master-gflags '{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}' \
+  --tserver-gflags '{"primary":{"fs_wal_dirs":"/mnt/yba-wal","log_dir":"/mnt/yba-shared","tmp_dir":"/mnt/yba-data/tmp"}}' \
+  -H https://34.174.153.78:443

@@ -1,0 +1,126 @@
+---
+- name: Configure system for YugabyteDB on RHEL/CentOS
+  hosts: default
+  become: yes
+
+  vars:
+    user: ybaadmin
+    yugabyte_sudoers_file: /etc/sudoers.d/ybaadmin
+    core_dump_dir: "/home/{{ user }}/core"
+
+  tasks:
+    - name: Create yugabyte user
+      ansible.builtin.user:
+        name: "{{ user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Grant full sudo privileges to yugabyte user
+      ansible.builtin.copy:
+        dest: "{{ yugabyte_sudoers_file }}"
+        content: "{{ user }} ALL=(ALL) NOPASSWD: ALL"
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Check current ulimit
+      ansible.builtin.command: ulimit -a
+      register: ulimit_output
+      changed_when: false
+
+    - name: Print current ulimit
+      ansible.builtin.debug:
+        msg: "{{ ulimit_output.stdout_lines }}"
+
+    - name: Set system ulimits for YugabyteDB in limits.conf
+      ansible.builtin.lineinfile:
+        path: "/etc/security/limits.conf"
+        line: "{{ item }}"
+        create: yes
+        state: present
+      loop:
+        - "{{ user }} soft nofile 1048576"
+        - "{{ user }} hard nofile 1048576"
+        - "{{ user }} soft sigpending 119934"
+        - "{{ user }} hard sigpending 119934"
+
+    - name: Check ulimit after update
+      ansible.builtin.command: ulimit -a
+      register: ulimit_after
+      changed_when: false
+
+    - name: Print ulimit after update
+      ansible.builtin.debug:
+        msg: "{{ ulimit_after.stdout_lines }}"
+
+    - name: Configure nproc limit in /etc/security/limits.d/20-nproc.conf
+      ansible.builtin.lineinfile:
+        path: "/etc/security/limits.d/20-nproc.conf"
+        regexp: '^(\*|\s*{{ user }})\s+soft\s+nproc'
+        line: "* soft nproc 12000"
+        create: yes
+        state: present
+
+    - name: Ensure core dump directory exists
+      ansible.builtin.file:
+        path: "{{ core_dump_dir }}"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0755'
+
+    - name: Set vm.swappiness to 0
+      ansible.builtin.command: sysctl -w vm.swappiness=0
+      register: swappiness
+      changed_when: "'0' in swappiness.stdout"
+
+    - name: Persist vm.swappiness setting
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^vm.swappiness'
+        line: 'vm.swappiness=0'
+
+    - name: Print vm.swappiness output
+      ansible.builtin.debug:
+        msg: "{{ swappiness.stdout }}"
+
+    - name: Set core pattern path
+      ansible.builtin.command: sysctl -w kernel.core_pattern={{ core_dump_dir }}/core_%p_%t_%E
+      register: core_pattern
+      changed_when: true
+
+    - name: Print core pattern output
+      ansible.builtin.debug:
+        msg: "{{ core_pattern.stdout }}"
+
+    - name: Set vm.max_map_count
+      ansible.builtin.command: sysctl -w vm.max_map_count=262144
+      register: vm_max_map_count
+      changed_when: true
+
+    - name: Persist vm.max_map_count
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^vm.max_map_count'
+        line: 'vm.max_map_count=262144'
+
+    - name: Print vm.max_map_count
+      ansible.builtin.debug:
+        msg: "{{ vm_max_map_count.stdout }}"
+
+    - name: Validate vm.max_map_count change
+      ansible.builtin.command: sysctl vm.max_map_count
+      register: validate_map_count
+      changed_when: false
+
+    - name: Print validation output
+      ansible.builtin.debug:
+        msg: "{{ validate_map_count.stdout }}"
+
+    - name: Check transparent hugepages status
+      ansible.builtin.command: cat /sys/kernel/mm/transparent_hugepage/enabled
+      register: thp
+      changed_when: false
+
+    - name: Print transparent hugepage status
+      ansible.builtin.debug:
+        msg: "{{ thp.stdout_lines }}"

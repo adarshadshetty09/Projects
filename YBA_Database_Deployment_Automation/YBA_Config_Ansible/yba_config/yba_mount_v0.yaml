@@ -1,0 +1,51 @@
+---
+- name: Automate disk partitioning, formatting, and mounting
+  hosts: localhost
+  become: yes
+
+  vars:
+    disk_device: /dev/sdb
+    mount_point: /mnt/yba
+    filesystem_type: ext4
+
+  tasks:
+
+    - name: Unmount existing partitions (ignore errors)
+      ansible.builtin.shell: "umount {{ disk_device }}*"
+      ignore_errors: true
+
+    - name: Create GPT partition table
+      ansible.builtin.command: >
+        parted -s {{ disk_device }} mklabel gpt
+
+    - name: Create primary partition (full disk)
+      ansible.builtin.command: >
+        parted -s {{ disk_device }} mkpart primary 0% 100%
+
+    - name: Format the new partition
+      ansible.builtin.command: >
+        mkfs -t {{ filesystem_type }} {{ disk_device }}1
+
+    - name: Get UUID of the new partition
+      ansible.builtin.command: >
+        blkid -s UUID -o value {{ disk_device }}1
+      register: partition_uuid
+
+    - name: Ensure mount directory exists
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount the new partition using UUID
+      ansible.builtin.mount:
+        path: "{{ mount_point }}"
+        src: "UUID={{ partition_uuid.stdout }}"
+        fstype: "{{ filesystem_type }}"
+        state: mounted
+
+    - name: Add entry to /etc/fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ partition_uuid.stdout }} {{ mount_point }} {{ filesystem_type }} defaults 0 0"
+        state: present

@@ -1,0 +1,116 @@
+---
+- name: Configure system for YugabyteDB on RHEL/CentOS
+  hosts: default
+  become: yes
+
+  vars:
+    user: ybaadmin
+    yugabyte_sudoers_file: /etc/sudoers.d/ybaadmin
+    core_dump_dir: "/home/{{ user }}/core"
+
+  tasks:
+    - name: Create yugabyte user
+      ansible.builtin.user:
+        name: "{{ user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Grant full sudo privileges to yugabyte user
+      ansible.builtin.copy:
+        dest: "{{ yugabyte_sudoers_file }}"
+        content: "{{ user }} ALL=(ALL) NOPASSWD: ALL"
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Check for ulimit 
+      ansible.builtin.command: ulimit -a
+      register: ulimit
+    
+    - name: Print the output for ulimit
+      ansible.builtin.debug: 
+        var: ulimit.stdout_lines
+
+    - name: Set system ulimits for YugabyteDB in limits.conf
+      ansible.builtin.lineinfile:
+        path: "/etc/security/limits.conf"
+        line: "{{ item }}"
+        create: yes
+        state: present
+      loop:
+        - "{{ user }} soft nofile 1048576"
+        - "{{ user }} hard nofile 1048576"
+        - "{{ user }} soft sigpending 119934"
+        - "{{ user }} hard sigpending 119934"
+
+    - name: Check for ulimit after set
+      ansible.builtin.command: ulimit -a
+      register: ulimit_set
+    
+    - name: Print the output for ulimit after set
+      ansible.builtin.debug: 
+        var: ulimit_set.stdout_lines
+
+
+    - name: Configure nproc limit in /etc/security/limits.d/20-nproc.conf
+      ansible.builtin.lineinfile:
+        path: "/etc/security/limits.d/20-nproc.conf"
+        regexp: '^(\*|\s*{{ user }})\s+soft\s+nproc'
+        line: "* soft nproc 12000"
+        create: yes
+        state: present
+
+    - name: Ensure core dump directory exists
+      ansible.builtin.file:
+        path: "{{ core_dump_dir }}"
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0755'
+
+    - name: Configure kernel parameters via sysctl
+      ansible.builtin.command: sudo bash -c 'sysctl vm.swappiness=0 >> /etc/sysctl.conf'
+      register: kernel_parameter
+
+    - name: Print the vm.swappiness
+      ansible.builtin.debug: 
+        var: kernel_parameter.stdout_lines
+    
+    - name: Setup path for core file 
+      ansible.builtin.command: sudo sysctl kernel.core_pattern=/home/yugabyte/cores/core_%p_%t_%E
+      register: setPath
+
+    - name: Print the for file 
+      ansible.builtin.debug: 
+        var: setPath.stdout_lines
+    
+    - name: vm.max_map_count
+      ansible.builtin.command: sudo sysctl -w vm.max_map_count=262144 && bash -c 'sysctl vm.max_map_count=262144 >> /etc/sysctl.conf'
+      register: vm_max_map_count
+
+    - name: Print the vm.max_map_count
+      ansible.builtin.debug: 
+        var: vm_max_map_count
+        
+    - name: Validate The Change
+      ansible.builtin.command: sysctl vm.max_map_count
+      register: max_count
+
+    - name: Print the max_count
+      ansible.builtin.debug: 
+        var: max_count.stdout_lines
+
+    - name: Enable transparent hugepages
+      ansible.builtin.command: cat /sys/kernel/mm/transparent_hugepage/enabled
+      register: thp
+
+    - name: Print the thp
+      ansible.builtin.debug: 
+        var: thp.stdout_lines
+    
+
+
+    
+      
+
+      
+

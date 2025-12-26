@@ -1,0 +1,183 @@
+---
+- name: Setup WAL, Shared, and Data disks
+  hosts: localhost
+  become: yes
+
+  vars:
+    disks:
+      - { device: "/dev/sdb", part: "/dev/sdb1", mount: "/mnt/yba-wal" }
+      - { device: "/dev/sdc", part: "/dev/sdc1", mount: "/mnt/yba-shared" }
+      - { device: "/dev/sdd", part: "/dev/sdd1", mount: "/mnt/yba-data" }
+
+  tasks:
+
+    - name: Create GPT partition table
+      ansible.builtin.command: "parted -s {{ item.device }} mklabel gpt"
+      loop: "{{ disks }}"
+      failed_when: false
+
+    - name: Create primary ext4 partition
+      ansible.builtin.command: "parted -s {{ item.device }} mkpart primary ext4 0% 100%"
+      loop: "{{ disks }}"
+      failed_when: false
+
+    - name: Create ext4 filesystem (only if missing)
+      ansible.builtin.command: "mkfs.ext4 {{ item.part }}"
+      when: "'ext4' not in lookup('ansible.builtin.pipe', 'blkid -o value -s TYPE ' ~ item.part)"
+      loop: "{{ disks }}"
+
+    - name: Ensure mount directory exists
+      ansible.builtin.file:
+        path: "{{ item.mount }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ disks }}"
+
+    - name: Get UUID of each partition
+      ansible.builtin.command: "blkid -s UUID -o value {{ item.part }}"
+      register: uuid_output
+      loop: "{{ disks }}"
+      loop_control:
+        label: "{{ item.part }}"
+
+    # ------------------------------
+    #  Combine UUID with disk info
+    # ------------------------------
+    - name: Build list of disks with UUID
+      set_fact:
+        disks_with_uuid: "{{ disks_with_uuid | default([]) + [ item.0 | combine({'uuid': item.1.stdout }) ] }}"
+      loop: "{{ disks | zip(uuid_output.results) }}"
+      loop_control:
+        label: "{{ item.0.part }}"
+
+    # ------------------------------
+    # Use item.uuid (no more loop.index0)
+    # ------------------------------
+    - name: Add fstab entry for each mounted volume
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ item.uuid }} {{ item.mount }} ext4 defaults 0 0"
+        regexp: "{{ item.mount | regex_escape() }}"
+        state: present
+      loop: "{{ disks_with_uuid }}"
+
+    - name: Mount all drives
+      ansible.builtin.command: "mount -a"
+      changed_when: false
+
+
+    ## 1. Set Ownership for /mnt
+    - name: Set /mnt ownership to ybaadmin:ybaadmin
+      ansible.builtin.file:
+        path: /mnt
+        owner: ybaadmin
+        group: ybaadmin
+        state: directory
+        # mode: '0755' # You can optionally set mode here if needed
+      # Add a handler to skip this if user/group doesn't exist
+      ignore_errors: true
+
+    ## 2. Set Ownership for Yugabyte Directories
+    - name: Set Yugabyte data directories ownership to yugabyte:yugabyte recursively
+      ansible.builtin.file:
+        path: "/mnt/{{ item }}"
+        owner: yugabyte
+        group: yugabyte
+        state: directory
+        recurse: yes
+      loop:
+        - yba-wal
+        - yba-shared
+        - yba-data
+      # Add a handler to skip this if user/group doesn't exist
+      ignore_errors: true
+
+     # Adding the tmp directories
+    - name: Ensure /mnt/yba-data exists
+      ansible.builtin.file:
+        path: /mnt/yba-data
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0755'
+
+    - name: Create tmp directory under /mnt/yba-data
+      ansible.builtin.file:
+        path: /mnt/yba-data/tmp
+        state: directory
+        owner: ybaadmin
+        group: ybaadmin
+        mode: '0755'
+        recurse: yes
+
+
+
+    - name: Check SELinux status before change
+      command: getenforce
+      register: selinux_before
+
+    - name: Print SELinux status (before)
+      debug:
+        msg: "SELinux status before: {{ selinux_before.stdout }}"
+
+    - name: Set SELinux to permissive (setenforce 0)
+      command: setenforce 0
+      when: selinux_before.stdout != "Permissive"
+
+    - name: Check SELinux status after change
+      command: getenforce
+      register: selinux_after
+
+    - name: Print SELinux status (after)
+      debug:
+        msg: "SELinux status after: {{ selinux_after.stdout }}"
+
+    
+    ## --- SSH Daemon Configuration (/etc/ssh/sshd_config) ---
+
+    - name: Ensure PublickeyAuthentication is explicitly set to 'yes'
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PubkeyAuthentication\s+' # Finds commented or uncommented line
+        line: "PubkeyAuthentication yes"
+        validate: '/usr/sbin/sshd -t -f %s'
+        state: present
+        
+    - name: Ensure PasswordAuthentication is explicitly set to 'no' (optional, but good security practice)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication\s+' 
+        line: "PasswordAuthentication no"
+        validate: '/usr/sbin/sshd -t -f %s'
+        state: present
+
+    - name: Restart sshd service to apply new configuration
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
+
+    ## --- Sudoers Configuration (/etc/sudoers) ---
+
+    - name: Allow 'wheel' group to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: '%wheel        ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^%wheel\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
+    
+    - name: Allow 'ybaadmin' user to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: 'ybaadmin      ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^ybaadmin\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid
+
+    - name: Allow 'yugabyte' user to use sudo without password
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        state: present
+        line: 'yugabyte      ALL=(ALL)       NOPASSWD: ALL'
+        regexp: '^yugabyte\s+'
+        validate: '/usr/sbin/visudo -cf %s' # Ensures syntax is valid

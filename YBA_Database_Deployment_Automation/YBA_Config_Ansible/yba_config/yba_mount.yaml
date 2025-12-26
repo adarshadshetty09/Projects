@@ -1,0 +1,42 @@
+---
+- name: Setup Disk /dev/sdb for /mnt/yba
+  hosts: localhost
+  become: yes
+ 
+  vars:
+    disk_device: "/dev/sdb"
+    partition_device: "/dev/sdb1"
+    mount_point: "/mnt/yba"
+    filesystem_type: "ext4"
+ 
+  tasks:
+ 
+    - name: Create GPT label on /dev/sdb
+      ansible.builtin.command: "parted -s {{ disk_device }} mklabel gpt"
+ 
+    - name: Create primary ext4 partition on /dev/sdb
+      ansible.builtin.command: "parted -s {{ disk_device }} mkpart primary ext4 0% 100%"
+ 
+    - name: Create ext4 filesystem on /dev/sdb1
+      ansible.builtin.filesystem:
+        fstype: "{{ filesystem_type }}"
+        dev: "{{ partition_device }}"
+ 
+    - name: Ensure mount directory exists
+      ansible.builtin.file:
+        path: "{{ mount_point }}"
+        state: directory
+        mode: '0755'
+ 
+    - name: Get UUID of /dev/sdb1
+      ansible.builtin.command: "blkid -s UUID -o value {{ partition_device }}"
+      register: disk_uuid
+ 
+    - name: Add fstab entry for /mnt/yba
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ disk_uuid.stdout }} {{ mount_point }} {{ filesystem_type }} defaults 0 0"
+        state: present
+ 
+    - name: Mount all entries from fstab
+      ansible.builtin.command: mount -a

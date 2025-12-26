@@ -1,0 +1,26 @@
+---
+- name: Set SELinux to permissive temporarily
+  hosts: localhost
+  become: yes
+
+  tasks:
+
+    - name: Check SELinux status before change
+      command: getenforce
+      register: selinux_before
+
+    - name: Print SELinux status (before)
+      debug:
+        msg: "SELinux status before: {{ selinux_before.stdout }}"
+
+    - name: Set SELinux to permissive (setenforce 0)
+      command: setenforce 0
+      when: selinux_before.stdout != "Permissive"
+
+    - name: Check SELinux status after change
+      command: getenforce
+      register: selinux_after
+
+    - name: Print SELinux status (after)
+      debug:
+        msg: "SELinux status after: {{ selinux_after.stdout }}"
